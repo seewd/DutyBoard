@@ -1,11 +1,25 @@
-import { defineConfig } from "vite";
+/// <reference types="node" />
 
-// @ts-expect-error process is a nodejs global
+import { defineConfig } from "vite";
+import path from "path";
+
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig({
   clearScreen: false,  // prevent Vite from obscuring rust errors
+  root: "src",
+  build: {
+    target: "esnext",
+    outDir: path.resolve(__dirname, "dist"),
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "src/index.html"),
+        setting: path.resolve(__dirname, "src/setting.html"),
+      },
+    },
+  },
   server: {
     port: 1420,
     strictPort: true,

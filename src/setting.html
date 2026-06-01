@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="/setting.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>看板设置</title>
+  <script type="module" src="/setting.ts" defer></script>
+</head>
+
+<body>
+  <main>
+    <header>
+      <span class="title">看板设置</span>
+    </header>
+    <section>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <!-- <th>周期</th> -->
+            <th></th>
+            <th>值日生 1</th>
+            <th>值日生 2</th>
+            <th>值日生 3</th>
+          </tr>
+        </thead>
+        <tbody id="duty-table-body">
+          <!-- js生成 -->
+        </tbody>
+      </table>
+
+      <div class="field-group">
+        <p>开机自启动</p>
+        <label class="switch">
+          <input type="checkbox" id="autostart-toggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="field-group">
+        <p>看板位置</p>
+        <div id="position-selector" class="radio-group">
+          <label class="radio-item">
+            <input type="radio" name="board-position" value="tl" checked />
+            左上
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="board-position" value="tc" />
+            正上
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="board-position" value="tr" />
+            右上
+          </label>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="titlebar" data-tauri-drag-region>
+    <span>duty-board · setting</span>
+    <menu>
+      <button class="close cancel danger">
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24">
+          <path fill="currentColor"
+            d="M13.46 12L19 17.54V19h-1.46L12 13.46L6.46 19H5v-1.46L10.54 12L5 6.46V5h1.46L12 10.54L17.54 5H19v1.46z" />
+        </svg>
+      </button>
+      <button class="close confirm">
+        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24">
+          <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+        </svg>
+      </button>
+    </menu>
+  </div>
+</body>
+
+</html>

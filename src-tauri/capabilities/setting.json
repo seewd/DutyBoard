@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "setting",
+  "description": "Capability for the setting window",
+  "windows": [
+    "setting"
+  ],
+  "permissions": [
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-position",
+    "core:window:allow-close",
+    "core:event:default",
+    "autostart:default"
+  ]
+}

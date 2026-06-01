@@ -1,118 +1,112 @@
 import dayjs from "dayjs";
-import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getAllWindows } from "@tauri-apps/api/window";
+import { WebviewWindow, getAllWebviewWindows } from "@tauri-apps/api/webviewWindow";
 import { invoke } from "@tauri-apps/api/core";
-import { initWindowManagement } from "./window-utils";
-import { getTodayDutyInfo, getNextDutyInfo } from "./duty-data";
+import { DutyInfo, DUTY_GROUPS, getDutyInfo, HIDDEN_PERIODS, HourNum, isInHiddenPeriod, MinuteNum } from "./duty-data";
 
-let dateEl: HTMLElement | null;
-let dutyLabelEl: HTMLElement | null;
-let dutyNamesEl: HTMLElement | null;
-let dutyNextEl: HTMLElement | null;
 
-/** 上课时段（窗口隐藏）
- * [start, end) 左闭右开 */
-const HIDDEN_PERIODS = [
-  { start: [8, 0], end: [8, 40] },
-  { start: [8, 50], end: [9, 30] },
-  { start: [9, 50], end: [10, 30] },
-  { start: [10, 40], end: [11, 20] },
-  { start: [11, 30], end: [12, 10] },
-  { start: [13, 40], end: [14, 20] },
-  { start: [14, 30], end: [15, 10] },
-  { start: [15, 30], end: [16, 10] },
-  { start: [16, 20], end: [17, 0] },
-] as const;
-
-function isInHiddenPeriod(now: dayjs.Dayjs): boolean {
-  const m = now.hour() * 60 + now.minute();
-  return HIDDEN_PERIODS.some(p =>
-    m >= p.start[0] * 60 + p.start[1] &&
-    m < p.end[0] * 60 + p.end[1],
-  );
+const DUTY_CONFIG = {
+  groups: DUTY_GROUPS,
+  day1: dayjs('2026-05-25')
+};
+const SCRN_CONFIG = {
+  hiddenPeriods: HIDDEN_PERIODS
 }
 
-function updateClock() {
-  if (!dateEl) return;
-  const now = dayjs();
-  dateEl.textContent = now.format("YY-MM-DD HH:mm:ss");
-}
+function setDutyInfo(date: dayjs.Dayjs, weekdayEls: NodeListOf<Element>, dutyTodayEls: NodeListOf<Element>, dutyNextEls: NodeListOf<Element>) {
+  const today = date.startOf('day');
+  const info = getDutyInfo(today, DUTY_CONFIG);
+  console.log('dutyInfo:', info);
 
-function setDutyInfo() {
-  if (!dutyLabelEl || !dutyNamesEl) return;
-  const info = getTodayDutyInfo();
-  if (info) {
-    dutyLabelEl.textContent = `今日值日 第${info.weekIndex}周 ${info.weekdayLabel}`;
-    dutyNamesEl.textContent = info.group.members.join(" ");
-  } else {
-    dutyLabelEl.textContent = "周末休息";
-    dutyNamesEl.textContent = "［無值日生］";
+  const weekdayLabel = '周' + "一二三四五六日".charAt((7 + today.day() - 1) % 7) + ` (${today.format("MM/DD")})`;
+  for (const weekday_el of weekdayEls) {
+    weekday_el.textContent = info.groupIdx !== null
+      ? `今日值日 #${info.groupIdx + 1} ${weekdayLabel}`
+      : `周末休息 ${weekdayLabel}`;
+  }
+  for (const dutyToday_el of dutyTodayEls) {
+    dutyToday_el.textContent = info.group ? info.group['W401'].join(' ') : "［無值日生］";
   }
 
-  // 次日
-  if (dutyNextEl) {
-    const next = getNextDutyInfo();
-    dutyNextEl.textContent = (next ? `下一工作日:  ${next.group.members.join(" ")}` : "");
+  let next = today;
+  let info_next: DutyInfo;
+  do {
+    next = next.add(1, 'day');
+    info_next = getDutyInfo(next, DUTY_CONFIG);
+  } while (info_next.group === null);
+
+  console.log('next dutyInfo:', info_next);
+  for (const dutyNext_el of dutyNextEls) {
+    dutyNext_el.textContent = (info_next.group ? `下一工作日:  ${info_next.group['W401'].join(' ')}` : "------");
   }
 }
+try {
+  const $all = (s: string) => document.querySelectorAll(s);
+  const weekdayEls = $all("time.weekday");
+  const datetimeEls = $all("time.datetime");
+  const dutyTodayEls = $all("p.duty-today");
+  const dutyNextEls = $all("p.duty-next");
+  const settingBtns = $all("button.setting");
+  const minimizeBtns = $all("button.minimize");
+  const closeBtns = $all("button.close");
 
-window.addEventListener("DOMContentLoaded", () => {
-  dateEl = document.getElementById("date");
-  dutyLabelEl = document.getElementById("duty-label");
-  dutyNamesEl = document.getElementById("duty-names");
-  dutyNextEl = document.getElementById("duty-next");
+  const appWindow = (await getAllWindows().then(wins => wins.find(w => w.label === "board")))!;
 
-  const appWindow = getCurrentWindow();
 
-  // Set up window management (touch drag + native drag snap)
-  const dragArea = document.querySelector(".titlebar-drag-area") as HTMLElement | null;
-  if (dragArea) initWindowManagement(dragArea, appWindow);
 
-  const minimizeBtn = document.getElementById("titlebar-minimize");
-  const closeBtn = document.getElementById("titlebar-close");
+  const bindMenuButtonFn = (btns: NodeListOf<Element>, fn: EventListener) => {
+    for (const btn of btns) {
+      btn.addEventListener("click", fn);
+      btn.addEventListener("touchstart", (e) => { e.preventDefault(); fn(e); }, { passive: false });  // touchscreen compat
+    }
+  }
+  bindMenuButtonFn(settingBtns, async () => {
+    const existing = (await getAllWebviewWindows()).find(w => w.label === "setting");
+    if (existing) { existing.close(); return; }
 
-  function handleMinimize() { appWindow.minimize(); }
-  function handleClose() { appWindow.close(); }
+    const webview = new WebviewWindow("setting", {
+      url: "/setting.html",
+      title: "值日看板设置",
+      width: 240,
+      height: 500,
+      x: 0,
+      y: 120,
+      decorations: false,
+      resizable: false,
+      shadow: false,
+      transparent: true,
+    });
+    webview.once("tauri://webview-created", () => {
+      webview.show();
+      webview.setFocus();
+    });
+  });
+  bindMenuButtonFn(minimizeBtns, () => appWindow.minimize());
+  bindMenuButtonFn(closeBtns, () => appWindow.close());
 
-  minimizeBtn?.addEventListener("click", handleMinimize);
-  closeBtn?.addEventListener("click", handleClose);
-  // Touch events for touchscreen
-  minimizeBtn?.addEventListener("touchstart", (e) => { e.preventDefault(); handleMinimize(); }, { passive: false });
-  closeBtn?.addEventListener("touchstart", (e) => { e.preventDefault(); handleClose(); }, { passive: false });
+  setDutyInfo(dayjs(), weekdayEls, dutyTodayEls, dutyNextEls);
 
-  setDutyInfo();
-  updateClock();
+  function updateClocks() {
+    const now = dayjs();
+    for (const el of datetimeEls) {
+      if (!el) return;
+      el.textContent = now.format("YY-MM-DD HH:mm:ss");
+    }
+  }
 
-  // 时钟刻度
-  let tick: () => void = () => {
-    updateClock();
-    const delay = 1000 - (dayjs().valueOf() % 1000);
-    setTimeout(tick, delay);
-  };
-  setTimeout(tick, 1000 - (dayjs().valueOf() % 1000));
+  function applyHiddenState() {
+    const now = dayjs();
+    const hidden = isInHiddenPeriod(now.hour() as HourNum, now.minute() as MinuteNum, SCRN_CONFIG);
+    // console.log('hide:', hidden);
+    if (hidden) appWindow.minimize();
+    else appWindow.unminimize();
+  }
 
   invoke<boolean>("get_show_mode").then((showMode) => {
-    if (showMode) return;
-
-    let isVisible = true;
-
-    function checkVisibility() {
-      const shouldHide = isInHiddenPeriod(dayjs());
-      if (shouldHide && isVisible) {
-        document.body.style.display = 'none';
-        isVisible = false;
-      } else if (!shouldHide && !isVisible) {
-        document.body.style.display = '';
-        isVisible = true;
-      }
-    }
-
-    tick = () => {
-      updateClock();
-      checkVisibility();
-      const delay = 1000 - (dayjs().valueOf() % 1000);
-      setTimeout(tick, delay);
-    };
-
-    checkVisibility();
+    setTimeout(() => {
+      updateClocks();
+      setInterval(updateClocks, 1000);
+      if (!showMode) setInterval(applyHiddenState, 1000);
+    }, 1000 - (dayjs().valueOf() % 1000)); // 对齐
   });
-});
+} catch (e) { console.error(e) } // no window for bun env

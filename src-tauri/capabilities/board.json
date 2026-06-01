@@ -1,0 +1,18 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "board",
+  "description": "enable hide&show and titlebar dragging for the board window",
+  "windows": [
+    "board"
+  ],
+  "permissions": [
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-minimize",
+    "core:window:allow-unminimize",
+    "core:window:allow-start-dragging",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-create",
+    "core:webview:allow-create-webview-window"
+  ]
+}
