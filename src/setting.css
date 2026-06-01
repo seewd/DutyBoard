@@ -116,6 +116,27 @@ main {
                 }
             }
 
+            select {
+                background: #1a1a1aaa;
+                color: #ddd;
+                border: 1px solid #ddb6;
+                border-radius: 2px;
+                padding: 2px 6px;
+                font-size: 0.6rem;
+                outline: none;
+                cursor: pointer;
+                transition: border-color 0.2s;
+
+                &:focus {
+                    border-color: #f5c842;
+                }
+
+                option {
+                    background: #1a1a1a;
+                    color: #ddd;
+                }
+            }
+
             .radio-group {
                 display: flex;
                 gap: 8px;

@@ -2,11 +2,10 @@ import dayjs from "dayjs";
 import { getAllWindows } from "@tauri-apps/api/window";
 import { WebviewWindow, getAllWebviewWindows } from "@tauri-apps/api/webviewWindow";
 import { invoke } from "@tauri-apps/api/core";
-import { DutyInfo, DUTY_GROUPS, getDutyInfo, HIDDEN_PERIODS, HourNum, isInHiddenPeriod, MinuteNum } from "./duty-data";
+import { DutyInfo, getDutyDataByRoom, getDutyInfo, HIDDEN_PERIODS, HourNum, isInHiddenPeriod, MinuteNum } from "./duty-data";
 
-
-const DUTY_CONFIG = {
-  groups: DUTY_GROUPS,
+let DUTY_CONFIG = {
+  groups: [] as { [key: string]: string[] }[],
   day1: dayjs('2026-05-25')
 };
 const SCRN_CONFIG = {
@@ -24,8 +23,9 @@ function setDutyInfo(date: dayjs.Dayjs, weekdayEls: NodeListOf<Element>, dutyTod
       ? `今日值日 #${info.groupIdx + 1} ${weekdayLabel}`
       : `周末休息 ${weekdayLabel}`;
   }
+
   for (const dutyToday_el of dutyTodayEls) {
-    dutyToday_el.textContent = info.group ? info.group['W401'].join(' ') : "［無值日生］";
+    dutyToday_el.textContent = info.group ? Object.values(info.group)[0].join(' ') : "［無值日生］";
   }
 
   let next = today;
@@ -37,9 +37,22 @@ function setDutyInfo(date: dayjs.Dayjs, weekdayEls: NodeListOf<Element>, dutyTod
 
   console.log('next dutyInfo:', info_next);
   for (const dutyNext_el of dutyNextEls) {
-    dutyNext_el.textContent = (info_next.group ? `下一工作日:  ${info_next.group['W401'].join(' ')}` : "------");
+    dutyNext_el.textContent = (info_next.group ? `下一工作日:  ${Object.values(info_next.group)[0].join(' ')}` : "------");
   }
 }
+
+const initRoom = localStorage.getItem("duty-room") || "W401";
+getDutyDataByRoom(initRoom).then(groups => {
+  DUTY_CONFIG.groups = groups;
+  // 重新渲染
+  const weekdayEls = document.querySelectorAll("time.weekday");
+  const dutyTodayEls = document.querySelectorAll("p.duty-today");
+  const dutyNextEls = document.querySelectorAll("p.duty-next");
+  setDutyInfo(dayjs(), weekdayEls, dutyTodayEls, dutyNextEls);
+}).catch(err => {
+  console.error("get duty failed:", err);
+});
+
 try {
   const $all = (s: string) => document.querySelectorAll(s);
   const weekdayEls = $all("time.weekday");
@@ -68,7 +81,7 @@ try {
       url: "/setting.html",
       title: "值日看板设置",
       width: 240,
-      height: 500,
+      height: 560,
       x: 0,
       y: 120,
       decorations: false,

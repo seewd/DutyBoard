@@ -1,24 +1,7 @@
 import dayjs from 'dayjs';
 import businessDays from 'dayjs-business-days2';
+import { fetchDutyData, type DutyRoomData as RoomData } from './webfetch';
 dayjs.extend(businessDays);
-
-export const DUTY_GROUPS = [
-    { 'W401': ["朱辰"] },              // 第 1 周 周一
-    { 'W401': ["郑泽涵"] },            // 第 1 周 周二
-    { 'W401': ["赵嘉彤", "马瑞骐"] },  // 第 1 周 周三
-    { 'W401': ["余卓霏", "魏思霖"] },  // 第 1 周 周四
-    { 'W401': ["沈欣怡", "巩沛铭"] },  // 第 1 周 周五
-    { 'W401': ["尚湉湉", "李颜汐"] },  // 第 2 周 周一
-    { 'W401': ["李函菲", "钟雨珊"] },  // 第 2 周 周二
-    { 'W401': ["张俊哲", "沈默"] },    // 第 2 周 周三
-    { 'W401': ["徐文浩", "王鹏云"] },  // 第 2 周 周四
-    { 'W401': ["王士涵", "刘艺泽"] },  // 第 2 周 周五
-    { 'W401': ["温睿杰", "李轩宁"] },  // 第 3 周 周一
-    { 'W401': ["宋思咏", "马浩哲"] },  // 第 3 周 周二
-    { 'W401': ["梁承浩", "宫紫卿"] },  // 第 3 周 周三
-    { 'W401': ["李湘淮", "李牧其"] },  // 第 3 周 周四
-    { 'W401': ["冯子宸"] },            // 第 3 周 周五
-];
 
 interface DutyConfig {
     groups: { [key: string]: string[] }[];
@@ -40,13 +23,28 @@ export function getDutyInfo(date: dayjs.Dayjs, conf: DutyConfig): DutyInfo {
         group: conf.groups[groupIdx]
     } : { groupIdx: null, group: null };
 };
-// console.log(dayjs('2026-06-01').businessDiff(dayjs('2026-05-04')), dayjs().businessDiff(dayjs('2026-05-04')));
 
-console.log(123456789,dayjs("2026-06-01 00:00:01").businessDiff(dayjs('2026-05-31  00:00:01')))
-// console.log(getAllDutyInfo(dayjs('2026-05-27'), {
-//     groups: DUTY_GROUPS,
-//     day1: dayjs('2026-05-04')
-// }))
+/** API->groups */
+export function roomDataToGroups(room: RoomData): { [room: string]: string[] }[] {
+    return room.groups.map(g => ({
+        [room.room]: g.map(p => p[0])
+    }));
+}
+
+/** 全局缓存的原始房间数据 (程序启动时填充) */
+let RoomsData: RoomData[] | null = null;
+let _currentRoomGroups: { [room: string]: string[] }[] | null = null;
+
+export async function getDutyDataByRoom(roomName: string): Promise<{ [room: string]: string[] }[]> {
+    if (!RoomsData) RoomsData = await fetchDutyData();
+    const room = RoomsData.find(r => r.room === roomName);
+    if (!room) throw new Error(`${roomName} not found`);
+    _currentRoomGroups = roomDataToGroups(room);
+    return _currentRoomGroups;
+}
+
+export const getAllRoomsData = () => RoomsData ? RoomsData.map(r => r.room) : [];
+export const getCurrentGroups = () => _currentRoomGroups ?? [];
 
 const _HIDDEN_PERIOD_A = [
     { start: [7, 50], end: [8, 30] },

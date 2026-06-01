@@ -28,6 +28,7 @@ pub fn run() {
     tauri::Builder::default()
         .manage(ShowMode(show_mode))
         .plugin(tauri_plugin_autostart::Builder::new().build())
+        .plugin(tauri_plugin_http::init())
         .invoke_handler(tauri::generate_handler![get_show_mode])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
