@@ -5,14 +5,18 @@ export type DutyRoomData = {
     groups: string[][][];
 };
 
+const YUQUE_TOKEN = import.meta.env.VITE_YUQUE_TOKEN;
+
 export async function fetchDutyData(): Promise<DutyRoomData[]> {
     type DutyDataResponse = {
         version: string,
         data: { id: string, name: string, index: number, rowCount: number, colCount: number, table: string[][] }[]
     };
+    if (!YUQUE_TOKEN) throw new Error("YUQUE_TOKEN not set");
+
     const resp = await fetch("https://www.yuque.com/api/v2/repos/gewu/iteam/docs/dutyboard_group", {
         method: 'GET',
-        headers: { "X-Auth-Token": "JUS2GyMzm7AY8HcmnKn5WjkFO5g4n7cxWxcSLZzf" }
+        headers: { "X-Auth-Token": YUQUE_TOKEN }
     });
     if (resp.status !== 200) throw new Error(`fetch failed ${resp.status} ${resp.statusText}`);
 

@@ -2,13 +2,32 @@
 
 import { defineConfig } from "vite";
 import path from "path";
+import fs from "fs";
 
-const host = process.env.TAURI_DEV_HOST;
+function loadDotEnv() {
+  const envPath = path.resolve(__dirname, ".env");
+  if (!fs.existsSync(envPath)) return {};
+  const content = fs.readFileSync(envPath, "utf-8");
+  const env: Record<string, string> = {};
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+  }
+  return env;
+}
 
-// https://vite.dev/config/
+const dotenv = loadDotEnv();
+const host = dotenv.TAURI_DEV_HOST;
+
 export default defineConfig({
   clearScreen: false,  // prevent Vite from obscuring rust errors
   root: "src",
+  define: {
+    "import.meta.env.VITE_YUQUE_TOKEN": JSON.stringify(dotenv.VITE_YUQUE_TOKEN ?? ""),
+  },
   build: {
     target: "esnext",
     outDir: path.resolve(__dirname, "dist"),

@@ -31,7 +31,7 @@ export function roomDataToGroups(room: RoomData): { [room: string]: string[] }[]
     }));
 }
 
-/** 全局缓存的原始房间数据 (程序启动时填充) */
+/** 全局缓存的房间数据 (程序启动时填充) */
 let RoomsData: RoomData[] | null = null;
 let _currentRoomGroups: { [room: string]: string[] }[] | null = null;
 
