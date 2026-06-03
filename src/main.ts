@@ -12,20 +12,26 @@ const SCRN_CONFIG = {
   hiddenPeriods: HIDDEN_PERIODS
 }
 
-function setDutyInfo(date: dayjs.Dayjs, weekdayEls: NodeListOf<Element>, dutyTodayEls: NodeListOf<Element>, dutyNextEls: NodeListOf<Element>) {
+let weekdayEl: Element | null = null;
+let dutyTodayEl: Element | null = null;
+let dutyNextEl: Element | null = null;
+let datetimeEl: Element | null = null;
+let titleEl: Element | null = null;
+
+function setDutyInfo(date: dayjs.Dayjs) {
   const today = date.startOf('day');
   const info = getDutyInfo(today, DUTY_CONFIG);
   console.log('dutyInfo:', info);
 
   const weekdayLabel = '周' + "一二三四五六日".charAt((7 + today.day() - 1) % 7) + ` (${today.format("MM/DD")})`;
-  for (const weekday_el of weekdayEls) {
-    weekday_el.textContent = info.groupIdx !== null
+  if (weekdayEl) {
+    weekdayEl.textContent = info.groupIdx !== null
       ? `今日值日 #${info.groupIdx + 1} ${weekdayLabel}`
       : `周末休息 ${weekdayLabel}`;
   }
 
-  for (const dutyToday_el of dutyTodayEls) {
-    dutyToday_el.textContent = info.group ? Object.values(info.group)[0].join(' ') : "［無值日生］";
+  if (dutyTodayEl) {
+    dutyTodayEl.textContent = info.group ? Object.values(info.group)[0].join(' ') : "［無值日生］";
   }
 
   let next = today;
@@ -36,13 +42,12 @@ function setDutyInfo(date: dayjs.Dayjs, weekdayEls: NodeListOf<Element>, dutyTod
   } while (info_next.group === null);
 
   console.log('next dutyInfo:', info_next);
-  for (const dutyNext_el of dutyNextEls) {
-    dutyNext_el.textContent = (info_next.group ? `下一工作日:  ${Object.values(info_next.group)[0].join(' ')}` : "------");
+  if (dutyNextEl) {
+    dutyNextEl.textContent = (info_next.group ? `下一工作日:  ${Object.values(info_next.group)[0].join(' ')}` : "------");
   }
 }
 
 function updateTitle(roomName: string) {
-  const titleEl = document.getElementById("title");
   if (titleEl) titleEl.textContent = `duty-board @ ${roomName}`;
 }
 
@@ -51,13 +56,10 @@ export function refreshDutyInfo() {
   updateTitle(initRoom);
   getDutyDataByRoom(initRoom).then(groups => {
     DUTY_CONFIG.groups = groups;
-    // 重新渲染
-    const weekdayEls = document.querySelectorAll("time.weekday");
-    const dutyTodayEls = document.querySelectorAll("p.duty-today");
-    const dutyNextEls = document.querySelectorAll("p.duty-next");
-    setDutyInfo(dayjs(), weekdayEls, dutyTodayEls, dutyNextEls);
+    setDutyInfo(dayjs());
   }).catch(err => {
     console.error("get duty failed:", err);
+    if (dutyTodayEl) dutyTodayEl.textContent = "[服务异常]";
   });
 }
 
@@ -69,26 +71,25 @@ getCurrentWindow().listen("duty-room-changed", () => {
 });
 
 try {
-  const $all = (s: string) => document.querySelectorAll(s);
-  const weekdayEls = $all("time.weekday");
-  const datetimeEls = $all("time.datetime");
-  const dutyTodayEls = $all("p.duty-today");
-  const dutyNextEls = $all("p.duty-next");
-  const settingBtns = $all("button.setting");
-  const minimizeBtns = $all("button.minimize");
-  const closeBtns = $all("button.close");
-
   const appWindow = (await getAllWindows().then(wins => wins.find(w => w.label === "board")))!;
 
+  // 绑定 DOM 元素
+  weekdayEl = document.querySelector("time.weekday");
+  dutyTodayEl = document.querySelector("p.duty-today");
+  dutyNextEl = document.querySelector("p.duty-next");
+  datetimeEl = document.querySelector("time.datetime");
+  titleEl = document.getElementById("title");
+  const settingBtn = document.querySelector("button.setting");
+  const minimizeBtn = document.querySelector("button.minimize");
+  const closeBtn = document.querySelector("button.close");
 
+  const bindClick = (el: Element | null, fn: EventListener) => {
+    if (!el) return;
+    el.addEventListener("click", fn);
+    el.addEventListener("touchstart", (e) => { e.preventDefault(); fn(e); }, { passive: false });
+  };
 
-  const bindMenuButtonFn = (btns: NodeListOf<Element>, fn: EventListener) => {
-    for (const btn of btns) {
-      btn.addEventListener("click", fn);
-      btn.addEventListener("touchstart", (e) => { e.preventDefault(); fn(e); }, { passive: false });  // touchscreen compat
-    }
-  }
-  bindMenuButtonFn(settingBtns, async () => {
+  bindClick(settingBtn, async () => {
     const existing = (await getAllWebviewWindows()).find(w => w.label === "setting");
     if (existing) { existing.close(); return; }
 
@@ -109,16 +110,15 @@ try {
       webview.setFocus();
     });
   });
-  bindMenuButtonFn(minimizeBtns, () => appWindow.minimize());
-  bindMenuButtonFn(closeBtns, () => appWindow.close());
+  bindClick(minimizeBtn, () => appWindow.minimize());
+  bindClick(closeBtn, () => appWindow.close());
 
-  setDutyInfo(dayjs(), weekdayEls, dutyTodayEls, dutyNextEls);
+  setDutyInfo(dayjs());
 
   function updateClocks() {
     const now = dayjs();
-    for (const el of datetimeEls) {
-      if (!el) return;
-      el.textContent = now.format("YY-MM-DD HH:mm:ss");
+    if (datetimeEl) {
+      datetimeEl.textContent = now.format("YY-MM-DD HH:mm:ss");
     }
   }
 
