@@ -99,7 +99,7 @@ main {
                     }
                 }
 
-                input:checked + .slider {
+                input:checked+.slider {
                     background: #f5c842;
 
                     &::before {
@@ -108,7 +108,7 @@ main {
                     }
                 }
 
-                input:focus-visible + .slider {
+                input:focus-visible+.slider {
                     outline: 1px solid #f5c842;
                     outline-offset: 1px;
                 }
@@ -269,10 +269,6 @@ main {
             &:hover {
                 background: #333;
                 color: #fff;
-
-                &.danger {
-                    background: #e81123;
-                }
             }
         }
     }

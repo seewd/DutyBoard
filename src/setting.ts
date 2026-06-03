@@ -1,5 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
+import { emit } from "@tauri-apps/api/event";
 import { getDutyDataByRoom, getAllRoomsData, getCurrentGroups } from "./duty-data";
 
 const appWindow = getCurrentWindow();
@@ -65,6 +66,7 @@ function buildDutyTable() {
   });
 }
 
+// 房间选择
 function fillRoomSelect(rooms: string[]) {
   const sel = document.getElementById("room-select") as HTMLSelectElement;
   if (!sel) return;
@@ -82,6 +84,8 @@ function fillRoomSelect(rooms: string[]) {
     localStorage.setItem("duty-room", currentRoom);
     await getDutyDataByRoom(currentRoom);
     buildDutyTable();
+    // 通知board刷新
+    emit("duty-room-changed");
   });
 }
 
