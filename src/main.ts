@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import { getAllWindows } from "@tauri-apps/api/window";
+import { getAllWindows, getCurrentWindow } from "@tauri-apps/api/window";
 import { WebviewWindow, getAllWebviewWindows } from "@tauri-apps/api/webviewWindow";
 import { invoke } from "@tauri-apps/api/core";
 import { DutyInfo, getDutyDataByRoom, getDutyInfo, HIDDEN_PERIODS, HourNum, isInHiddenPeriod, MinuteNum } from "./duty-data";
@@ -41,16 +41,31 @@ function setDutyInfo(date: dayjs.Dayjs, weekdayEls: NodeListOf<Element>, dutyTod
   }
 }
 
-const initRoom = localStorage.getItem("duty-room") || "W401";
-getDutyDataByRoom(initRoom).then(groups => {
-  DUTY_CONFIG.groups = groups;
-  // 重新渲染
-  const weekdayEls = document.querySelectorAll("time.weekday");
-  const dutyTodayEls = document.querySelectorAll("p.duty-today");
-  const dutyNextEls = document.querySelectorAll("p.duty-next");
-  setDutyInfo(dayjs(), weekdayEls, dutyTodayEls, dutyNextEls);
-}).catch(err => {
-  console.error("get duty failed:", err);
+function updateTitle(roomName: string) {
+  const titleEl = document.getElementById("title");
+  if (titleEl) titleEl.textContent = `duty-board @ ${roomName}`;
+}
+
+export function refreshDutyInfo() {
+  const initRoom = localStorage.getItem("duty-room") || "W401";
+  updateTitle(initRoom);
+  getDutyDataByRoom(initRoom).then(groups => {
+    DUTY_CONFIG.groups = groups;
+    // 重新渲染
+    const weekdayEls = document.querySelectorAll("time.weekday");
+    const dutyTodayEls = document.querySelectorAll("p.duty-today");
+    const dutyNextEls = document.querySelectorAll("p.duty-next");
+    setDutyInfo(dayjs(), weekdayEls, dutyTodayEls, dutyNextEls);
+  }).catch(err => {
+    console.error("get duty failed:", err);
+  });
+}
+
+refreshDutyInfo();
+
+// 监听设置窗口发送的班级变更事件，刷新值日信息
+getCurrentWindow().listen("duty-room-changed", () => {
+  refreshDutyInfo();
 });
 
 try {
