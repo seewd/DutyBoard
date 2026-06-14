@@ -158,6 +158,9 @@ try {
 
   await applyBoardPosition();
 
+  // 每 30 秒检查并刷新值日数据（实际拉取由 duty-data.ts 的缓存 TTL 控制为 5 分钟一次）
+  setInterval(refreshDutyInfo, 30 * 1000);
+
   invoke<boolean>("get_show_mode").then((showMode) => {
     setTimeout(() => {
       updateClocks();

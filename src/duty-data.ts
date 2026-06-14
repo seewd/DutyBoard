@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import businessDays from 'dayjs-business-days2';
 import { fetchDutyData, type DutyRoomData as RoomData } from './webfetch';
+import { getDutyData as getStoredDutyData, setDutyData } from './store';
 dayjs.extend(businessDays);
 
 interface DutyConfig {
@@ -31,12 +32,26 @@ export function roomDataToGroups(room: RoomData): { [room: string]: string[] }[]
     }));
 }
 
-/** 全局缓存的房间数据 (程序启动时填充) */
+/** 运行时内存缓存 */
 let RoomsData: RoomData[] | null = null;
 let _currentRoomGroups: { [room: string]: string[] }[] | null = null;
 
+/** 拉取网络数据，成功则写入 store；失败则从 store 读取兜底 */
+async function loadDutyData(): Promise<RoomData[]> {
+    try {
+        const data = await fetchDutyData();
+        setDutyData(data); // 静默持久化
+        return data;
+    } catch (e) {
+        console.warn("fetch duty data failed, loading from store", e);
+        const stored = await getStoredDutyData();
+        if (stored) return stored;
+        throw e; // store 也没有，只能抛错
+    }
+}
+
 export async function getDutyDataByRoom(roomName: string): Promise<{ [room: string]: string[] }[]> {
-    if (!RoomsData) RoomsData = await fetchDutyData();
+    RoomsData = await loadDutyData();
     const room = RoomsData.find(r => r.room === roomName);
     if (!room) throw new Error(`${roomName} not found`);
     _currentRoomGroups = roomDataToGroups(room);
