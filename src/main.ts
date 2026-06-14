@@ -4,6 +4,7 @@ import { WebviewWindow, getAllWebviewWindows } from "@tauri-apps/api/webviewWind
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Position, moveWindow } from "@tauri-apps/plugin-positioner";
+import { getRoom, getBoardPosition } from "./store";
 import { DutyInfo, getDutyDataByRoom, getDutyInfo, HIDDEN_PERIODS, HourNum, isInHiddenPeriod, MinuteNum } from "./duty-data";
 
 let DUTY_CONFIG = {
@@ -53,8 +54,8 @@ function updateTitle(roomName: string) {
   if (titleEl) titleEl.textContent = `duty-board @ ${roomName}`;
 }
 
-export function refreshDutyInfo() {
-  const initRoom = localStorage.getItem("duty-room") || "W401";
+export async function refreshDutyInfo() {
+  const initRoom = await getRoom();
   updateTitle(initRoom);
   getDutyDataByRoom(initRoom).then(groups => {
     DUTY_CONFIG.groups = groups;
@@ -132,20 +133,16 @@ try {
     else appWindow.unminimize();
   }
 
+  // 看板位置码 → Position 枚举
+  const posMap: Record<string, Position> = {
+    tl: Position.TopLeft, tc: Position.TopCenter, tr: Position.TopRight,
+    ml: Position.LeftCenter, mc: Position.Center, mr: Position.RightCenter,
+    bl: Position.BottomLeft, bc: Position.BottomCenter, br: Position.BottomRight,
+  };
+
   // 应用看板位置
-  function applyBoardPosition() {
-    const code = localStorage.getItem("board-position") || "ml";
-    const posMap: Record<string, Position> = {
-      tl: Position.TopLeft,
-      tc: Position.TopCenter,
-      tr: Position.TopRight,
-      ml: Position.LeftCenter,
-      mc: Position.Center,
-      mr: Position.RightCenter,
-      bl: Position.BottomLeft,
-      bc: Position.BottomCenter,
-      br: Position.BottomRight,
-    };
+  async function applyBoardPosition() {
+    const code = await getBoardPosition();
     const pos = posMap[code] ?? Position.LeftCenter;
     try {
       moveWindow(pos);

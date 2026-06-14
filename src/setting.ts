@@ -1,11 +1,12 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
+import { getRoom, setRoom, getBoardPosition, setBoardPosition } from "./store";
 import { getDutyDataByRoom, getAllRoomsData, getCurrentGroups } from "./duty-data";
 
 const appWindow = getCurrentWindow();
 
-let currentRoom = localStorage.getItem("duty-room") || "W401";
+let currentRoom = "W401";
 
 // 标题栏按钮
 document.querySelectorAll("button.close").forEach(btn => {
@@ -81,7 +82,7 @@ function fillRoomSelect(rooms: string[]) {
 
   sel.addEventListener("change", async () => {
     currentRoom = sel.value;
-    localStorage.setItem("duty-room", currentRoom);
+    await setRoom(currentRoom);
     await getDutyDataByRoom(currentRoom);
     buildDutyTable();
     // 通知board刷新
@@ -91,18 +92,23 @@ function fillRoomSelect(rooms: string[]) {
 
 // 看板位置选择
 const positionRadios = document.querySelectorAll<HTMLInputElement>('input[name="board-position"]');
-const savedPosition = localStorage.getItem("board-position") || "ml";
+
 positionRadios.forEach(radio => {
-  if (radio.value === savedPosition) radio.checked = true;
   radio.addEventListener("change", () => {
     if (radio.checked) {
-      localStorage.setItem("board-position", radio.value);
+      setBoardPosition(radio.value);
       emit("board-position-changed");
     }
   });
 });
 
 (async () => {
+  currentRoom = await getRoom();
+  const savedPosition = await getBoardPosition();
+  positionRadios.forEach(radio => {
+    if (radio.value === savedPosition) radio.checked = true;
+  });
+
   await getDutyDataByRoom(currentRoom);
   const rooms = getAllRoomsData();
   if (rooms.length > 0) fillRoomSelect(rooms);
