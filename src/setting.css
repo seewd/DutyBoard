@@ -114,19 +114,22 @@ main {
             }
 
             .radio-group {
-                display: flex;
-                gap: 8px;
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 4px;
 
                 label.radio-item {
                     display: flex;
                     align-items: center;
-                    gap: 4px;
-                    padding: 2px 10px;
+                    justify-content: center;
+                    gap: 2px;
+                    padding: 2px 6px;
                     border: 1px solid #ddb6;
                     background: #1a1a1aaa;
                     cursor: pointer;
-                    font-size: 0.6rem;
+                    font-size: 0.55rem;
                     color: #ccc;
+                    white-space: nowrap;
                     transition: background 0.2s, border-color 0.2s;
 
                     input[type="radio"] {

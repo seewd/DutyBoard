@@ -1,7 +1,9 @@
 import dayjs from "dayjs";
-import { getAllWindows, getCurrentWindow } from "@tauri-apps/api/window";
+import { getAllWindows } from "@tauri-apps/api/window";
 import { WebviewWindow, getAllWebviewWindows } from "@tauri-apps/api/webviewWindow";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { Position, moveWindow } from "@tauri-apps/plugin-positioner";
 import { DutyInfo, getDutyDataByRoom, getDutyInfo, HIDDEN_PERIODS, HourNum, isInHiddenPeriod, MinuteNum } from "./duty-data";
 
 let DUTY_CONFIG = {
@@ -66,7 +68,7 @@ export function refreshDutyInfo() {
 refreshDutyInfo();
 
 // 监听设置窗口发送的班级变更事件，刷新值日信息
-getCurrentWindow().listen("duty-room-changed", () => {
+listen("duty-room-changed", () => {
   refreshDutyInfo();
 });
 
@@ -129,6 +131,35 @@ try {
     if (hidden) appWindow.minimize();
     else appWindow.unminimize();
   }
+
+  // 应用看板位置
+  function applyBoardPosition() {
+    const code = localStorage.getItem("board-position") || "ml";
+    const posMap: Record<string, Position> = {
+      tl: Position.TopLeft,
+      tc: Position.TopCenter,
+      tr: Position.TopRight,
+      ml: Position.LeftCenter,
+      mc: Position.Center,
+      mr: Position.RightCenter,
+      bl: Position.BottomLeft,
+      bc: Position.BottomCenter,
+      br: Position.BottomRight,
+    };
+    const pos = posMap[code] ?? Position.LeftCenter;
+    try {
+      moveWindow(pos);
+    } catch (e) {
+      console.error("apply position failed:", e);
+    }
+  }
+
+  // 监听设置窗口发送的位置变更事件
+  listen("board-position-changed", () => {
+    applyBoardPosition();
+  });
+
+  await applyBoardPosition();
 
   invoke<boolean>("get_show_mode").then((showMode) => {
     setTimeout(() => {

@@ -89,6 +89,19 @@ function fillRoomSelect(rooms: string[]) {
   });
 }
 
+// 看板位置选择
+const positionRadios = document.querySelectorAll<HTMLInputElement>('input[name="board-position"]');
+const savedPosition = localStorage.getItem("board-position") || "ml";
+positionRadios.forEach(radio => {
+  if (radio.value === savedPosition) radio.checked = true;
+  radio.addEventListener("change", () => {
+    if (radio.checked) {
+      localStorage.setItem("board-position", radio.value);
+      emit("board-position-changed");
+    }
+  });
+});
+
 (async () => {
   await getDutyDataByRoom(currentRoom);
   const rooms = getAllRoomsData();
